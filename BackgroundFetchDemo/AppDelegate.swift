@@ -9,7 +9,7 @@
 import UIKit
 import BackgroundTasks
 
-private  let url : String = "https://stgappapi.e-arc.com/api/banner/get"
+private  let url : String = "Your Fetch URL"
 
 private typealias  BackgroundFetchHandler = (UIBackgroundFetchResult) -> Void
 
