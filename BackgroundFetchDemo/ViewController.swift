@@ -20,8 +20,8 @@ class ViewController: UIViewController {
     }
     
     func updateUI(statusStr : String?){
-        self.titleLabel.text = statusStr ?? "Update With nil text"
-        self.dateLabel.text = "\(Date())"
+        self.titleLabel?.text = statusStr ?? "Update With nil text"
+        self.dateLabel?.text = "\(Date())"
     }
 
 
