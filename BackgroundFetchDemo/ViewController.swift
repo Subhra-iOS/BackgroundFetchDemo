@@ -16,6 +16,10 @@ class ViewController: UIViewController {
     override func viewDidLoad() {
         super.viewDidLoad()
         // Do any additional setup after loading the view.
+        
+        let appDelegate = UIApplication.shared.delegate as! AppDelegate
+        appDelegate.setRootController(controller: self)
+        
         self.updateUI(statusStr: "No data loaded")
     }
     

@@ -18,6 +18,7 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
 
     private  var  responseData : Data?
     private var  backgroundDataFetchHandler : BackgroundFetchHandler?
+    private weak var rootController : ViewController?
 
     func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?) -> Bool {
         // Override point for customization after application launch.
@@ -60,10 +61,11 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
 extension  AppDelegate{
     
     private  func getViewController() -> ViewController?{
-        
-        let storyboard = UIStoryboard(name: "Main", bundle: Bundle.main)
-        let controller : ViewController? = storyboard.instantiateViewController(identifier: "rootControllerIdentifier")
-        return controller
+        return  self.rootController
+    }
+    
+    public func setRootController(controller : ViewController?) {
+        self.rootController = controller
     }
     
     private func fetchDataFromServerWith(handler: @escaping (UIBackgroundFetchResult) -> Void) {
