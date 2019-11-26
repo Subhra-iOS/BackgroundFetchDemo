@@ -67,7 +67,7 @@
 	</array>
 	<key>BGTaskSchedulerPermittedIdentifiers</key>
 	<array>
-		<string>com.SO.apprefresh</string>
+		<string>com.Dev.apprefresh</string>
 	</array>
 </dict>
 </plist>

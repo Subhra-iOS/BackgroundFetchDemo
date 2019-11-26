@@ -19,12 +19,19 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
     private  var  responseData : Data?
     private var  backgroundDataFetchHandler : BackgroundFetchHandler?
     private weak var rootController : ViewController?
+    private var appBGTask : BGTask?
 
     func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?) -> Bool {
         // Override point for customization after application launch.
           self.responseData = Data()
           UIApplication.shared.setMinimumBackgroundFetchInterval(UIApplication.backgroundFetchIntervalMinimum)
-
+        
+            BGTaskScheduler.shared.register(
+                 forTaskWithIdentifier: "com.Dev.apprefresh",
+                 using: DispatchQueue.global()
+             ) { task in
+                 self.handleAppRefresh(task)
+             }
         //registerBackgroundTaks()
        // registerLocalNotification()
         return true
@@ -72,6 +79,15 @@ extension  AppDelegate{
         
         self.backgroundDataFetchHandler = handler
         
+        let sessionConfigue = URLSessionConfiguration.background(withIdentifier: "Background")
+        let session = URLSession(configuration: sessionConfigue, delegate: self, delegateQueue: nil)
+        let dataTask = session.dataTask(with: URL(string: url)!)
+        dataTask.resume()
+        
+    }
+    
+    private func fetchDataFromServerWith() {
+                
         let sessionConfigue = URLSessionConfiguration.background(withIdentifier: "Background")
         let session = URLSession(configuration: sessionConfigue, delegate: self, delegateQueue: nil)
         let dataTask = session.dataTask(with: URL(string: url)!)
@@ -157,6 +173,7 @@ extension  AppDelegate : URLSessionDataDelegate {
                            
                        }
                         self.backgroundDataFetchHandler?(.newData)
+                        //self.appBGTask?.setTaskCompleted(success: true)
                         let  msg : String = "UI has been updated"
                         DispatchQueue.main.async { [unowned self]  in
                             if let vc : ViewController = self.getViewController() {
@@ -172,7 +189,35 @@ extension  AppDelegate : URLSessionDataDelegate {
     
 }
 
-extension AppDelegate{
+extension  AppDelegate{
+    
+    private func handleAppRefresh(_ task: BGTask) {
+            self.appBGTask = task
+           task.expirationHandler = {
+                self.cancelAllPendingBGTask()
+           }
+          task.setTaskCompleted(success: false)
+
+           scheduleAppRefresh()
+       }
+    
+    private func cancelAllPendingBGTask() {
+           BGTaskScheduler.shared.cancelAllTaskRequests()
+       }
+    
+    private func scheduleAppRefresh() {
+           do {
+               let request = BGAppRefreshTaskRequest(identifier: "com.Dev.apprefresh")
+               request.earliestBeginDate = Date(timeIntervalSinceNow: 60)
+               try BGTaskScheduler.shared.submit(request)
+           } catch {
+               print(error)
+           }
+       }
+    
+}
+
+/*extension AppDelegate{
     
     private func cancelAllPendingBGTask() {
         BGTaskScheduler.shared.cancelAllTaskRequests()
@@ -259,5 +304,5 @@ extension AppDelegate {
         }
     }
     
-}
+}*/
 
