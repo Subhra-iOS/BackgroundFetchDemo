@@ -16,7 +16,7 @@ public enum Result : Error{
     
 }
 
-private  let serviceURL : String =  "Your Fetch URL"
+private  let serviceURL : String = "Your Fetch URL"
 
 private typealias  BackgroundFetchHandler = (UIBackgroundFetchResult) -> Void
 
@@ -33,13 +33,13 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
     func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?) -> Bool {
         // Override point for customization after application launch.
          
-     /*   if #available(iOS 13.0, *) {
-            BGTaskScheduler.shared.register(forTaskWithIdentifier: "com.Dev.apprefresh", using: nil) {  [weak self] task in
-               self?.handleAppRefresh(task: task as! BGAppRefreshTask)
+     //   if #available(iOS 13.0, *) {
+            BGTaskScheduler.shared.register(forTaskWithIdentifier: "com.Dev.apprefresh", using: nil) {  [unowned self] task in
+               self.handleAppRefresh(task: task as! BGAppRefreshTask)
             } //DispatchQueue.global()
-        } else {*/
-                UIApplication.shared.setMinimumBackgroundFetchInterval(UIApplication.backgroundFetchIntervalMinimum)
-      //  }
+      //  } else {
+               // UIApplication.shared.setMinimumBackgroundFetchInterval(UIApplication.backgroundFetchIntervalMinimum)
+       // }
        
         return true
     }
@@ -58,21 +58,14 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
         // Use this method to release any resources that were specific to the discarded scenes, as they will not return.
     }
     
-    func application(_ application: UIApplication, performFetchWithCompletionHandler completionHandler: @escaping (UIBackgroundFetchResult) -> Void) {
-        
-      /*  if #available(iOS 13.0, *) {
-            
-        } else {*/
-                fetchDataFromServerWith(handler: completionHandler)
-        //}
-
-    }
+//    func application(_ application: UIApplication, performFetchWithCompletionHandler completionHandler: @escaping (UIBackgroundFetchResult) -> Void) {
+//
+//            fetchDataFromServerWith(handler: completionHandler)
+//
+//    }
     
     func applicationDidEnterBackground(_ application: UIApplication) {
-//        if #available(iOS 13.0, *) {
-//            scheduleAppRefresh()
-//       } else {
-//       }
+        self.scheduleAppRefresh()
         
     }
     private func fetchDataFromServerWith(handler: @escaping (UIBackgroundFetchResult) -> Void){
@@ -124,7 +117,7 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
        }
 
 }
-/*//MARK:------------iOS13-----------------------//
+//MARK:------------iOS13-----------------------//
 @available(iOS 13.0, *)
 extension AppDelegate{
     
@@ -132,10 +125,10 @@ extension AppDelegate{
 
        // Fetch the latest feed entries from server.
       private func handleAppRefresh(task: BGAppRefreshTask) {
-           scheduleAppRefresh()
+          self.scheduleAppRefresh()
            
            let queue = OperationQueue()
-           queue.maxConcurrentOperationCount = 1
+           queue.maxConcurrentOperationCount = OperationQueue.defaultMaxConcurrentOperationCount
            
            let downloadOp = self.createOperationToFetch()
             downloadOp.operationDidFinishHnadler { (response, state) in
@@ -154,7 +147,7 @@ extension AppDelegate{
                queue.cancelAllOperations()
                 
            }
-           queue.addOperation(downloadOp)
+           queue.addOperations([downloadOp], waitUntilFinished: false)
        }
     
 }
@@ -180,7 +173,7 @@ extension  AppDelegate{
         
            do {
                let request = BGAppRefreshTaskRequest(identifier: "com.Dev.apprefresh")
-               request.earliestBeginDate = Date(timeIntervalSinceNow: 5)
+               request.earliestBeginDate = Date(timeIntervalSinceNow: 30)
             
                try BGTaskScheduler.shared.submit(request)
     
@@ -190,4 +183,4 @@ extension  AppDelegate{
        }
     
 }
-*/
+
