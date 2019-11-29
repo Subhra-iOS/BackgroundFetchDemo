@@ -9,31 +9,38 @@
 import UIKit
 import BackgroundTasks
 
-private  let url : String = "Your Fetch URL"
+public enum Result : Error{
+    
+    case Success
+    case Failure(String)
+    
+}
+
+private  let serviceURL : String =  "Your Fetch URL"
 
 private typealias  BackgroundFetchHandler = (UIBackgroundFetchResult) -> Void
 
+@available(iOS 13.0, *)
 @UIApplicationMain
 class AppDelegate: UIResponder, UIApplicationDelegate {
 
-    private  var  responseData : Data?
+    
     private var  backgroundDataFetchHandler : BackgroundFetchHandler?
     private weak var rootController : ViewController?
     private var appBGTask : BGTask?
+    private var downloadOp : SRDownloadOperation?
 
     func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?) -> Bool {
         // Override point for customization after application launch.
-          self.responseData = Data()
-          UIApplication.shared.setMinimumBackgroundFetchInterval(UIApplication.backgroundFetchIntervalMinimum)
-        
-            BGTaskScheduler.shared.register(
-                 forTaskWithIdentifier: "com.Dev.apprefresh",
-                 using: DispatchQueue.global()
-             ) { task in
-                 self.handleAppRefresh(task)
-             }
-        //registerBackgroundTaks()
-       // registerLocalNotification()
+         
+     /*   if #available(iOS 13.0, *) {
+            BGTaskScheduler.shared.register(forTaskWithIdentifier: "com.Dev.apprefresh", using: nil) {  [weak self] task in
+               self?.handleAppRefresh(task: task as! BGAppRefreshTask)
+            } //DispatchQueue.global()
+        } else {*/
+                UIApplication.shared.setMinimumBackgroundFetchInterval(UIApplication.backgroundFetchIntervalMinimum)
+      //  }
+       
         return true
     }
 
@@ -52,257 +59,135 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
     }
     
     func application(_ application: UIApplication, performFetchWithCompletionHandler completionHandler: @escaping (UIBackgroundFetchResult) -> Void) {
-        fetchDataFromServerWith(handler: completionHandler)
-       
+        
+      /*  if #available(iOS 13.0, *) {
+            
+        } else {*/
+                fetchDataFromServerWith(handler: completionHandler)
+        //}
+
     }
     
     func applicationDidEnterBackground(_ application: UIApplication) {
-       // cancelAllPendingBGTask()
-        //scheduleAppRefresh()
-    }
-
-
-}
-
-//MARK:-------API call using URL Session----------//
-extension  AppDelegate{
-    
-    private  func getViewController() -> ViewController?{
-        return  self.rootController
-    }
-    
-    public func setRootController(controller : ViewController?) {
-        self.rootController = controller
-    }
-    
-    private func fetchDataFromServerWith(handler: @escaping (UIBackgroundFetchResult) -> Void) {
-        
-        self.backgroundDataFetchHandler = handler
-        
-        let sessionConfigue = URLSessionConfiguration.background(withIdentifier: "Background")
-        let session = URLSession(configuration: sessionConfigue, delegate: self, delegateQueue: nil)
-        let dataTask = session.dataTask(with: URL(string: url)!)
-        dataTask.resume()
+//        if #available(iOS 13.0, *) {
+//            scheduleAppRefresh()
+//       } else {
+//       }
         
     }
-    
-    private func fetchDataFromServerWith() {
-                
-        let sessionConfigue = URLSessionConfiguration.background(withIdentifier: "Background")
-        let session = URLSession(configuration: sessionConfigue, delegate: self, delegateQueue: nil)
-        let dataTask = session.dataTask(with: URL(string: url)!)
-        dataTask.resume()
-        
-    }
-}
-
-extension  AppDelegate : URLSessionDataDelegate {
-    
-     public func urlSession(_ session: URLSession, dataTask: URLSessionDataTask, didReceive response: URLResponse, completionHandler: @escaping (URLSession.ResponseDisposition) -> Swift.Void){
-        
-        if(dataTask.state == URLSessionTask.State.canceling) {
-            
-            completionHandler(.cancel)
-            return
-            
-        }else{
-                
-                if let urlResponse : HTTPURLResponse = response as? HTTPURLResponse{
-                    
-                    let httpsResponse : HTTPURLResponse = urlResponse
-                    let statusCode = httpsResponse.statusCode
-                    if statusCode == 200 {
-                        
-                        completionHandler(.allow)
-                    }else{
-                        
-                        completionHandler(.cancel)
+    private func fetchDataFromServerWith(handler: @escaping (UIBackgroundFetchResult) -> Void){
+           self.backgroundDataFetchHandler = handler
+           let queue = OperationQueue()
+           queue.maxConcurrentOperationCount = 1
+           
+            self.downloadOp  = self.createOperationToFetch()
+            self.downloadOp?.operationDidFinishHnadler { [unowned self] (response, state) in
+                print("\(String(describing: response))")
+               
+               if state {
+                   self.backgroundDataFetchHandler?(.newData)
+               }else{
+                    self.backgroundDataFetchHandler?(.failed)
+               }
+               
+                let  msg : String = "UI has been updated"
+                DispatchQueue.main.async { [unowned self]  in
+                    if let vc : ViewController = self.getViewController() {
+                        vc.updateUI(statusStr: msg)
                     }
                 }
-        }
-        
-    }
-    
-    func urlSession(_ session: URLSession, dataTask: URLSessionDataTask, didBecome downloadTask: URLSessionDownloadTask){
-        
-    }
-    
-      func urlSession(_ session: URLSession, dataTask: URLSessionDataTask, didReceive data: Data){
-          
-          if(dataTask.state == URLSessionTask.State.canceling) {
-              
-              return
-              
-          }else{
-              
-             self.responseData?.append(data)
-          }
-          
-      }
-  
-    public func urlSession(_ session: URLSession, task: URLSessionTask, didCompleteWithError error: Error?){
-        
-        // Check if the operation has been cancelled
-        if(task.state == URLSessionTask.State.canceling){
-            
-            return
-        }
-            // Check if the operation has been Suspended
-        else if(task.state == URLSessionTask.State.suspended) {
-            
-            return
-        }
-        
-        if let errorInfo = error{
-            
-            print("Session error: \(errorInfo.localizedDescription)")
-    
-        }
-        else{
-            
-            if let data : Data = self.responseData{
-                
-                 if let _ = error {
-                        self.backgroundDataFetchHandler?(.failed)
-                   }else{
-                       
-                       do{
-                           let responseDict : Any = try JSONSerialization.jsonObject(with: data, options: [])
-                           print("\(responseDict)")
-                       }catch{
-                           
-                       }
-                        self.backgroundDataFetchHandler?(.newData)
-                        //self.appBGTask?.setTaskCompleted(success: true)
-                        let  msg : String = "UI has been updated"
-                        DispatchQueue.main.async { [unowned self]  in
-                            if let vc : ViewController = self.getViewController() {
-                                vc.updateUI(statusStr: msg)
-                            }
-                        }
-                   }
             }
-            
-        }
-        
-    }
+           
+           queue.addOperation(self.downloadOp!)
+           self.downloadOp = nil
+       }
+       
+    private  func getViewController() -> ViewController?{
+          return  self.rootController
+      }
+      
+      public func setRootController(controller : ViewController?) {
+          self.rootController = controller
+      }
+    
+    private func createOperationToFetch() -> SRDownloadOperation{
+           
+           let downloader : SRDownloadOperation = SRDownloadOperation()
+           do{
+               
+            let _ = try downloader.initiate(serviceURL, hashIdentifier: "12345", progress: false)
+               
+           }catch{
+               
+           }
+           return  downloader
+       }
+
+}
+/*//MARK:------------iOS13-----------------------//
+@available(iOS 13.0, *)
+extension AppDelegate{
+    
+    // MARK: - Handling Launch for Tasks
+
+       // Fetch the latest feed entries from server.
+      private func handleAppRefresh(task: BGAppRefreshTask) {
+           scheduleAppRefresh()
+           
+           let queue = OperationQueue()
+           queue.maxConcurrentOperationCount = 1
+           
+           let downloadOp = self.createOperationToFetch()
+            downloadOp.operationDidFinishHnadler { (response, state) in
+                print("\(String(describing: response))")
+                task.setTaskCompleted(success: state)
+                let  msg : String = "UI has been updated"
+                DispatchQueue.main.async { [unowned self]  in
+                    if let vc : ViewController = self.getViewController() {
+                        vc.updateUI(statusStr: msg)
+                    }
+                }
+            }
+           
+           task.expirationHandler = {
+               // After all operations are cancelled, the completion block below is called to set the task to complete.
+               queue.cancelAllOperations()
+                
+           }
+           queue.addOperation(downloadOp)
+       }
     
 }
-
+@available(iOS 13.0, *)
 extension  AppDelegate{
-    
-    private func handleAppRefresh(_ task: BGTask) {
-            self.appBGTask = task
-           task.expirationHandler = {
-                self.cancelAllPendingBGTask()
-           }
-          task.setTaskCompleted(success: false)
-
-           scheduleAppRefresh()
-       }
     
     private func cancelAllPendingBGTask() {
            BGTaskScheduler.shared.cancelAllTaskRequests()
        }
     
     private func scheduleAppRefresh() {
+        
+            /** let now = Date()
+                   let oneWeek = TimeInterval(7 * 24 * 60 * 60)
+
+                   // Clean the database at most once per week.
+                   guard now > (lastCleanDate + oneWeek) else { return }
+                   
+                   let request = BGProcessingTaskRequest(identifier: "com.example.apple-samplecode.ColorFeed.db_cleaning")
+                   request.requiresNetworkConnectivity = false
+                   request.requiresExternalPower = true
+                   */
+        
            do {
                let request = BGAppRefreshTaskRequest(identifier: "com.Dev.apprefresh")
-               request.earliestBeginDate = Date(timeIntervalSinceNow: 60)
+               request.earliestBeginDate = Date(timeIntervalSinceNow: 5)
+            
                try BGTaskScheduler.shared.submit(request)
+    
            } catch {
                print(error)
            }
        }
     
 }
-
-/*extension AppDelegate{
-    
-    private func cancelAllPendingBGTask() {
-        BGTaskScheduler.shared.cancelAllTaskRequests()
-    }
-    
-    private func scheduleAppRefresh() {
-        let request = BGAppRefreshTaskRequest(identifier: "com.SO.apprefresh")
-        request.earliestBeginDate = Date(timeIntervalSinceNow: 60) // App Refresh after 1 minute.
-        //Note :: EarliestBeginDate should not be set to too far into the future.
-        do {
-        try BGTaskScheduler.shared.submit(request)
-        } catch {
-        print("Could not schedule app refresh: \(error)")
-        }
-    }
-    //MARK: Register BackGround Tasks
-    private func registerBackgroundTaks() {
-            BGTaskScheduler.shared.register(forTaskWithIdentifier: "com.SO.apprefresh", using: nil) { task in
-            //This task is cast with processing request (BGAppRefreshTask)
-            self.scheduleLocalNotification()
-            self.handleAppRefreshTask(task: task as! BGAppRefreshTask)
-        }
-    }
-    
-   private  func handleAppRefreshTask(task: BGAppRefreshTask) {
-          //Todo Work
-          /*
-           //AppRefresh Process
-           */
-          task.expirationHandler = {
-              //This Block call by System
-              //Canle your all tak's & queues
-          }
-          scheduleLocalNotification()
-          //
-          task.setTaskCompleted(success: true)
-      }
-    
-}
-
-//MARK:- Notification Helper
-extension AppDelegate {
-    
-    func registerLocalNotification() {
-        let notificationCenter = UNUserNotificationCenter.current()
-        let options: UNAuthorizationOptions = [.alert, .sound, .badge]
-        
-        notificationCenter.requestAuthorization(options: options) {
-            (didAllow, error) in
-            if !didAllow {
-                print("User has declined notifications")
-            }
-        }
-    }
-    
-    func scheduleLocalNotification() {
-        let notificationCenter = UNUserNotificationCenter.current()
-        notificationCenter.getNotificationSettings { (settings) in
-            if settings.authorizationStatus == .authorized {
-                self.fireNotification()
-            }
-        }
-    }
-    
-    func fireNotification() {
-        // Create Notification Content
-        let notificationContent = UNMutableNotificationContent()
-        
-        // Configure Notification Content
-        notificationContent.title = "Bg"
-        notificationContent.body = "BG Notifications."
-        
-        // Add Trigger
-        let notificationTrigger = UNTimeIntervalNotificationTrigger(timeInterval: 1.0, repeats: false)
-        
-        // Create Notification Request
-        let notificationRequest = UNNotificationRequest(identifier: "local_notification", content: notificationContent, trigger: notificationTrigger)
-        
-        // Add Request to User Notification Center
-        UNUserNotificationCenter.current().add(notificationRequest) { (error) in
-            if let error = error {
-                print("Unable to Add Notification Request (\(error), \(error.localizedDescription))")
-            }
-        }
-    }
-    
-}*/
-
+*/
