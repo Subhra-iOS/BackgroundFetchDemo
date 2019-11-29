@@ -130,8 +130,8 @@ extension AppDelegate{
            let queue = OperationQueue()
            queue.maxConcurrentOperationCount = OperationQueue.defaultMaxConcurrentOperationCount
            
-           let downloadOp = self.createOperationToFetch()
-            downloadOp.operationDidFinishHnadler { (response, state) in
+           self.downloadOp = self.createOperationToFetch()
+            self.downloadOp?.operationDidFinishHnadler { (response, state) in
                 print("\(String(describing: response))")
                 task.setTaskCompleted(success: state)
                 let  msg : String = "UI has been updated"
@@ -147,7 +147,8 @@ extension AppDelegate{
                queue.cancelAllOperations()
                 
            }
-           queue.addOperations([downloadOp], waitUntilFinished: false)
+           queue.addOperations([self.downloadOp!], waitUntilFinished: false)
+           self.downloadOp = nil
        }
     
 }
